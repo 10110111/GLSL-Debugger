@@ -47,6 +47,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/ptrace.h>
 #include <sys/shm.h>
 #include <sched.h>
+#include <sys/user.h>
 #endif /* !_WIN32 */
 #include <errno.h>
 #include "utils/dbgprint.h"
@@ -290,6 +291,40 @@ pcErrorCode ProgramControl::checkChildStatus(void)
 		case SIGTRAP:
 			dbgPrint(DBGLVL_DEBUG, "debuggee process was stopped by SIGTRAP %i\n", signal);
 			return PCE_NONE;
+		case SIGSEGV:
+		{
+			::siginfo_t siginfo;
+			if(ptrace(static_cast<__ptrace_request>(PTRACE_GETSIGINFO),pid,0,&siginfo)!=-1)
+			{
+				errno=0;
+				long pc=ptrace(PTRACE_PEEKUSER,pid,offsetof(struct user_regs_struct,rip));
+				if(errno)
+					perror("First address in the next line is wrong: PTRACE_PEEKUSER");
+				dbgPrint(DBGLVL_INFO, "PID %d: Segmentation fault at address %p (faulty address %p)\n", pid, pc, siginfo.si_addr);
+				errno=0;
+				const long origWord=ptrace(PTRACE_PEEKTEXT,pid,pc);
+				if(errno)
+					perror("PTRACE_PEEKTEXT");
+				else
+				{
+					const uint16_t jmpSelf=0xfeeb;
+					long newWord=origWord;
+					memcpy(&newWord,&jmpSelf,sizeof jmpSelf);
+					if(ptrace(PTRACE_POKETEXT,pid,pc,newWord)==-1)
+						perror("PTRACE_POKETEXT");
+					else
+					{
+						if(ptrace(PTRACE_DETACH,pid,0,0)==-1)
+							perror("PTRACE_DETACH");
+						else
+						{
+							dbgPrint(DBGLVL_INFO,"I've set `jmp $` instruction at faulting address, original two bytes are %02X %02X. You can now try attaching to pid %d to see what's going on.\n",origWord&0xff,(origWord>>8)&0xff,pid);
+							return PCE_EXIT;
+						}
+					}
+				}
+			}
+		}
 		case SIGHUP:
 		case SIGINT:
 		case SIGQUIT:
@@ -297,7 +332,6 @@ pcErrorCode ProgramControl::checkChildStatus(void)
 		case SIGABRT:
 		case SIGFPE:
 		case SIGKILL:
-		case SIGSEGV:
 		case SIGPIPE:
 		case SIGALRM:
 		case SIGTERM:
