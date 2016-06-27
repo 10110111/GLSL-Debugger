@@ -313,7 +313,10 @@ pcErrorCode ProgramControl::checkChildStatus(void)
 		default:
 			dbgPrint(DBGLVL_INFO, "debuggee process was stopped by signal %i: %s\n",
 					signal, strsignal(signal));
-			return PCE_EXIT;
+			ptrace(PTRACE_CONT,pid,0,signal);
+			// Hope the child won't receive tons of signals until we finally return,
+			// otherwise we may get stack overflow.
+			return checkChildStatus();
 		}
 #ifdef WIFCONTINUED
 	} else if (WIFCONTINUED(status)) {
