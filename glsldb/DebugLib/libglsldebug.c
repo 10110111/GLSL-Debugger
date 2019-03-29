@@ -1321,7 +1321,7 @@ void *dlsym(void *handle, const char *symbol)
 		unsetenv("GLSL_DEBUGGER_DLSYM");
 	}
 
-	if (g.initialized) {
+	if (g.initialized && !(symbol[0]=='_' && symbol[1]=='_')) {
 		sym = (void*)glXGetProcAddressHook((GLubyte *)symbol);
 		if (sym) {
 			return sym;
