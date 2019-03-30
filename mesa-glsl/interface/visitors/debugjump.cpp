@@ -18,7 +18,7 @@ void setDbgResultRange(DbgRsRange& r, const YYLTYPE& range)
 	r.left.line = range.first_line;
 	r.left.colum = range.first_column;
 	r.right.line = range.last_line;
-	r.right.colum = range.last_column;
+	r.right.colum = range.last_column-1;
 }
 
 bool ast_debugjump_traverser_visitor::step(const char* name)
