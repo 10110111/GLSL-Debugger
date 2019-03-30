@@ -98,6 +98,10 @@ void ast_debugpath_traverser_visitor::leave(class ast_expression_bin* node)
 void ast_debugpath_traverser_visitor::leave(class ast_function_expression* node)
 {
 	processDebugable(node);
+
+	foreach_list_typed(ast_node, child, link, &node->expressions)
+		childPath(node, child);
+
 	if (action == DPOpPathBuild && node->debug_state != ast_dbg_state_unset)
 		path.push(node);
 }
