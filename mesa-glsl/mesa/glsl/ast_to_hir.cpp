@@ -4014,7 +4014,9 @@ emit_function(_mesa_glsl_parse_state *state, ir_function *f)
     * the new ir_function block at the end of the toplevel instruction
     * list.
     */
-   state->toplevel_ir->push_tail(f);
+    fprintf(stderr, "emit_function(name=\"%s\"; state->toplevel_ir=%p)\n", f->name, state->toplevel_ir);
+    if(state->toplevel_ir)
+        state->toplevel_ir->push_tail(f);
 }
 
 
