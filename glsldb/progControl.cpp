@@ -1552,6 +1552,30 @@ pcErrorCode ProgramControl::getShaderCode(char *shaders[3],
 			cpyFromProcess(_debuggeePID, shaders[i], addr[i],
 					rec->items[2 * i + 1]);
 			shaders[i][rec->items[2 * i + 1]] = '\0';
+
+			// Remove repeating #version and #extension directives to avoid
+			// compilation errors if more than one source string have been
+			// concatenated.
+			// FIXME: variations like "#   version" are not checked
+			// FIXME: the strings checked for might be part of a comment, which
+			// we'll mistake for actual directive
+			const char*const repeatsToRemove[2]={"#version ", "#extension "};
+			for(unsigned r=0;r<sizeof repeatsToRemove/sizeof*repeatsToRemove;++r)
+			{
+				const char*const directive=repeatsToRemove[r];
+				for(char* prevVersionPos=strstr(shaders[i], directive); prevVersionPos!=NULL; )
+				{
+					char*const currVersionPos=strstr(prevVersionPos+1, directive);
+					if(currVersionPos)
+					{
+						// Comment it out
+						currVersionPos[0]='/';
+						currVersionPos[1]='/';
+					}
+					prevVersionPos=currVersionPos;
+				}
+			}
+
 		}
 
 		/* copy shader resource info */
